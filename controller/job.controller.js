@@ -1,0 +1,140 @@
+const Job = require('../model/job.model');
+
+class JobController {
+  async createJob(req, res) {
+    try {
+      const job = await Job.create({ ...req.body, client: req.user.id });
+      return res.status(201).json({ message: 'Job created', data: job });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getJobs(req, res) {
+    try {
+      const { budget, skills, date } = req.query;
+      const matchStage = {};
+  
+      if (budget) matchStage.budget = { $lte: Number(budget) };
+  
+      if (skills) {
+        const skillArray = skills.split(',').map(skill => skill.trim());
+        matchStage.skills = { $in: skillArray };
+      }
+  
+      if (date) {
+        const parsedDate = new Date(date);
+        if (!isNaN(parsedDate)) {
+          matchStage.createdAt = { $gte: parsedDate };
+        }
+      }
+  
+      const jobs = await Job.aggregate([
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: 'users', 
+            localField: 'client',
+            foreignField: '_id',
+            as: 'clientInfo'
+          }
+        },
+        { $unwind: '$clientInfo' },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            skills: 1,
+            budget: 1,
+            deadline: 1,
+            status: 1,
+            createdAt: 1,
+            client: '$clientInfo._id',
+            clientName: '$clientInfo.name'
+          }
+        },
+        { $sort: { createdAt: -1 } }
+      ]);
+  
+      return res.status(200).json(jobs);
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getJobById(req, res) {
+    try {
+      const jobId = req.params.id;
+  
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+        return res.status(400).json({ message: 'Invalid Job ID' });
+      }
+  
+      const job = await Job.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(jobId)
+          }
+        },
+        {
+          $lookup: {
+            from: 'users', // MongoDB collection name (usually lowercase + plural)
+            localField: 'client',
+            foreignField: '_id',
+            as: 'clientInfo'
+          }
+        },
+        { $unwind: '$clientInfo' },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            skills: 1,
+            budget: 1,
+            deadline: 1,
+            status: 1,
+            createdAt: 1,
+            client: '$clientInfo._id',
+            clientName: '$clientInfo.name'
+          }
+        }
+      ]);
+  
+      if (!job.length) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+  
+      return res.status(200).json({ message: 'Job found', data: job[0] });
+    } catch (err) {
+      throw err;
+    }
+  }
+  
+
+  async updateJob(req, res) {
+    try {
+      const job = await Job.findOneAndUpdate(
+        { _id: req.params.id, client: req.user.id },
+        req.body,
+        { new: true }
+      );
+      if (!job) return res.status(404).json({ message: 'Job not found or unauthorized' });
+      return res.status(200).json({ message: 'Job updated', data: job });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async deleteJob(req, res) {
+    try {
+      const job = await Job.findOneAndDelete({ _id: req.params.id, client: req.user.id });
+      if (!job) return res.status(404).json({ message: 'Job not found or unauthorized' });
+      return res.status(200).json({ message: 'Job deleted' });
+    } catch (err) {
+      throw err;
+    }
+  }
+}
+
+module.exports = new JobController();
