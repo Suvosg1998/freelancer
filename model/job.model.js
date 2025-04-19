@@ -36,7 +36,12 @@ const jobSchema = new mongoose.Schema({
   acceptedBid: {
      type: mongoose.Schema.Types.ObjectId, 
      ref: 'Bid', 
-     default: null }}, 
+     default: null 
+    },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  }}, 
      { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Job', jobSchema);

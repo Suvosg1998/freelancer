@@ -13,7 +13,7 @@ class JobController {
   async getJobs(req, res) {
     try {
       const { budget, skills, date } = req.query;
-      const matchStage = {};
+      const matchStage = {isDeleted: false};
   
       if (budget) matchStage.budget = { $lte: Number(budget) };
   
@@ -49,8 +49,8 @@ class JobController {
             deadline: 1,
             status: 1,
             createdAt: 1,
-            client: '$clientInfo._id',
-            clientName: '$clientInfo.name'
+            clientName: '$clientInfo.name',
+            isDeleted: 1
           }
         },
         { $sort: { createdAt: -1 } }
@@ -73,6 +73,11 @@ class JobController {
   
       const job = await Job.aggregate([
         {
+          $match: {
+            isDeleted: false,
+          }
+        },
+        {
           $lookup: {
             from: 'users', // MongoDB collection name (usually lowercase + plural)
             localField: 'client',
@@ -90,7 +95,7 @@ class JobController {
             deadline: 1,
             status: 1,
             createdAt: 1,
-            client: '$clientInfo._id',
+            isDeleted: 1,
             clientName: '$clientInfo.name'
           }
         }
@@ -124,7 +129,7 @@ class JobController {
 
   async deleteJob(req, res) {
     try {
-      const job = await Job.findOneAndDelete({ _id: req.params.id, client: req.user.id });
+      const job = await Job.findOneAndUpdate({ _id: req.params.id, client: req.user.id, },{isDeleted: true});
       if (!job) return res.status(404).json({ message: 'Job not found or unauthorized' });
       return res.status(200).json({ message: 'Job deleted' });
     } catch (err) {
