@@ -67,16 +67,11 @@ class JobController {
       const jobId = req.params.id;
   
       // Validate ObjectId format
-      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      if (!jobId) {
         return res.status(400).json({ message: 'Invalid Job ID' });
       }
   
       const job = await Job.aggregate([
-        {
-          $match: {
-            _id: new mongoose.Types.ObjectId(jobId)
-          }
-        },
         {
           $lookup: {
             from: 'users', // MongoDB collection name (usually lowercase + plural)
@@ -114,15 +109,16 @@ class JobController {
 
   async updateJob(req, res) {
     try {
-      const job = await Job.findOneAndUpdate(
-        { _id: req.params.id, client: req.user.id },
-        req.body,
-        { new: true }
-      );
-      if (!job) return res.status(404).json({ message: 'Job not found or unauthorized' });
-      return res.status(200).json({ message: 'Job updated', data: job });
+      const job = await Job.findById(req.params.id);
+      if (!job || job.client.toString() !== req.user.id) {
+        return res.status(404).json({ message: 'Job not found or unauthorized' });
+      }
+  
+      const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      return res.status(200).json({ message: 'Job updated', data: updatedJob });
     } catch (err) {
-      throw err;
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 

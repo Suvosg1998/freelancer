@@ -24,12 +24,8 @@ class AuthController {
         role,
       });
 
-      // Generate JWT token
-      const token = user.generateToken();
-
       return res.status(201).json({
         message: 'User registered successfully',
-        token,
         user: {
           id: user._id,
           name: user.name,
