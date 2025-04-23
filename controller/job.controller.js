@@ -75,6 +75,7 @@ class JobController {
         {
           $match: {
             isDeleted: false,
+            _id: new mongoose.Types.ObjectId(jobId)
           }
         },
         {
