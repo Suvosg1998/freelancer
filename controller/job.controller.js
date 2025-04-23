@@ -1,4 +1,5 @@
 const Job = require('../model/job.model');
+const mongoose = require('mongoose');
 
 class JobController {
   async createJob(req, res) {
