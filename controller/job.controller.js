@@ -51,7 +51,7 @@ class JobController {
             status: 1,
             createdAt: 1,
             clientName: '$clientInfo.name',
-            isDeleted: 1
+            isDeleted: 0
           }
         },
         { $sort: { createdAt: -1 } }
@@ -97,7 +97,7 @@ class JobController {
             deadline: 1,
             status: 1,
             createdAt: 1,
-            isDeleted: 1,
+            isDeleted: 0,
             clientName: '$clientInfo.name'
           }
         }
@@ -138,6 +138,49 @@ class JobController {
       throw err;
     }
   }
+  async countJobsByClient(req, res) {
+    try {
+      const clientId = req.params.clientId;
+
+      if (!clientId) {
+        return res.status(400).json({ message: 'Client ID is required' });
+      }
+
+      const count = await Job.countDocuments({ client: clientId, isDeleted: false });
+
+      return res.status(200).json({ clientId, totalJobs: count });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+  async getJobsByClient(req, res) {
+    try {
+      const clientId = req.params.clientId;
+  
+      // Lookup client info
+      const client = await mongoose.model('User').findById(clientId).select('name');
+  
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+  
+      // Fetch jobs
+      const jobs = await Job.find({ client: clientId, isDeleted: false }).sort({ createdAt: -1 });
+  
+      const totalJobs = jobs.length;
+  
+      return res.status(200).json({ 
+        clientId, 
+        clientName: client.name,
+        totalJobs, 
+        jobs 
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  }  
 }
 
 module.exports = new JobController();
