@@ -51,7 +51,7 @@ class JobController {
             status: 1,
             createdAt: 1,
             clientName: '$clientInfo.name',
-            isDeleted: 0
+            isDeleted: 1
           }
         },
         { $sort: { createdAt: -1 } }
@@ -97,7 +97,7 @@ class JobController {
             deadline: 1,
             status: 1,
             createdAt: 1,
-            isDeleted: 0,
+            isDeleted: 1,
             clientName: '$clientInfo.name'
           }
         }
