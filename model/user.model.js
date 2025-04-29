@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: String,
   role: { type: String, enum: ['client', 'freelancer'], default: 'freelancer' },
+  otp: { type: Number, default: null },
 }, { timestamps: true, versionKey: false });
 
 userSchema.methods.generateToken = function () {

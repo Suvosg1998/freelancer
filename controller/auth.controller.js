@@ -1,5 +1,6 @@
 const User = require('../model/user.model');
 const bcrypt = require('bcryptjs');
+const Mailer = require('../helper/mailer'); 
 
 class AuthController {
   // Register
@@ -22,10 +23,18 @@ class AuthController {
         email,
         password: hashedPassword,
         role,
+        otp: Math.floor(100000 + Math.random() * 900000), // Generate a random 6-digit OTP
       });
+      const mailer = new Mailer('Gmail', process.env.APP_EMAIL, process.env.APP_PASSWORD);
+             const mailObj = {
+                 to: email,
+                 subject: "Registration Confirmation",
+                 text: `Hello! ${name}, You have successfully registered with us with this ${email} your OTP is ${user.otp}.`
+             };
 
+             mailer.sendMail(mailObj);
       return res.status(201).json({
-        message: 'User registered successfully',
+        message: 'User registered successfully please check your email for OTP and validate it',
         user: {
           id: user._id,
           name: user.name,
@@ -38,7 +47,40 @@ class AuthController {
       return res.status(500).json({ message: 'Internal server error' });
     }
   }
+  async validateOtp(req, res) {
+    try {
+        const { email, otp } = req.body;
 
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP are required" });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+        await User.updateOne( {email},  { otp: null }  ); // clear OTP
+
+        const mailer = new Mailer('Gmail', process.env.APP_EMAIL, process.env.APP_PASSWORD);
+
+        const mailObj = {
+            to: email,
+            subject: "Registration Confirmed!",
+            text: `Congratulations ${user.name}, You have successfully registered with us with this ${email}.`
+        };
+
+        mailer.sendMail(mailObj);
+
+        return res.status(200).json({ message: "OTP validated successfully" });
+    } catch (err) {
+        console.error("Error during OTP validation:", err);
+        res.status(500).json({ message: "Server error.", error: err.message });
+    }
+}
   // Login
   async login(req, res) {
     try {
@@ -49,7 +91,9 @@ class AuthController {
       if (!user) {
         return res.status(400).json({ message: 'Invalid credentials' });
       }
-
+      if (user.otp) {
+        return res.status(400).json({ message: 'Please validate your OTP first' });
+      }
       // Compare password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
