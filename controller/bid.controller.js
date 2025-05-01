@@ -66,7 +66,64 @@ class BidController {
     }
   }
   
-
+  async getBidsForClientJobs(req, res) {
+    try {
+      const clientId = req.user.id;
+  
+      const bids = await Bid.aggregate([
+        // Join with jobs
+        {
+          $lookup: {
+            from: 'jobs',
+            localField: 'job',
+            foreignField: '_id',
+            as: 'jobInfo'
+          }
+        },
+        { $unwind: '$jobInfo' },
+  
+        // Filter only bids for jobs created by this client
+        {
+          $match: {
+            'jobInfo.client': new mongoose.Types.ObjectId(clientId)
+          }
+        },
+  
+        // Join with freelancer (user)
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'freelancer',
+            foreignField: '_id',
+            as: 'freelancerInfo'
+          }
+        },
+        { $unwind: '$freelancerInfo' },
+  
+        // Final output
+        {
+          $project: {
+            _id: 1,
+            amount: 1,
+            proposal: 1,
+            deliveryTime: 1,
+            jobId: '$jobInfo._id',
+            jobTitle: '$jobInfo.title',
+            freelancerId: '$freelancerInfo._id',
+            freelancerName: '$freelancerInfo.name',
+            createdAt: 1
+          }
+        },
+        { $sort: { createdAt: -1 } }
+      ]);
+  
+      return res.status(200).json({ message: 'Bids found', data: bids });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error fetching bids' });
+    }
+  }
+  
   async acceptBid(req, res) {
     try {
       const bid = await Bid.findById(req.params.bidId);

@@ -19,9 +19,9 @@ const bidSchema = new mongoose.Schema({
      required: true 
     },
   deliveryTime: {
-     type: Number, 
+     type: Date, 
      required: true 
-    }, // in days
+    }, 
 }, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Bid', bidSchema);

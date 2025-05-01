@@ -140,7 +140,7 @@ class JobController {
   }
   async countJobsByClient(req, res) {
     try {
-      const clientId = req.params.clientId;
+      const clientId = req.params.clientId || req.user.id; // Use clientId from params or user ID
 
       if (!clientId) {
         return res.status(400).json({ message: 'Client ID is required' });
@@ -156,25 +156,112 @@ class JobController {
   }
   async getJobsByClient(req, res) {
     try {
-      const clientId = req.params.clientId;
-  
-      // Lookup client info
-      const client = await mongoose.model('User').findById(clientId).select('name');
-  
-      if (!client) {
-        return res.status(404).json({ message: 'Client not found' });
-      }
-  
-      // Fetch jobs
-      const jobs = await Job.find({ client: clientId, isDeleted: false }).sort({ createdAt: -1 });
-  
-      const totalJobs = jobs.length;
-  
-      return res.status(200).json({ 
-        clientId, 
-        clientName: client.name,
-        totalJobs, 
-        jobs 
+      const clientId = new mongoose.Types.ObjectId(req.user.id);
+
+      const jobs = await Job.aggregate([
+        {
+          $match: {
+            client: clientId,
+            isDeleted: false
+          }
+        },
+      
+        // Lookup accepted bid
+        {
+          $lookup: {
+            from: 'bids',
+            localField: 'acceptedBid',
+            foreignField: '_id',
+            as: 'acceptedBid'
+          }
+        },
+        { $unwind: { path: '$acceptedBid', preserveNullAndEmptyArrays: true } },
+      
+        // Lookup freelancer for accepted bid
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'acceptedBid.freelancer',
+            foreignField: '_id',
+            as: 'acceptedBid.freelancerDetails'
+          }
+        },
+        { $unwind: { path: '$acceptedBid.freelancerDetails', preserveNullAndEmptyArrays: true } },
+      
+        // Lookup non-accepted bids
+        {
+          $lookup: {
+            from: 'bids',
+            let: { jobId: '$_id', acceptedBidId: '$acceptedBid._id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$job', '$$jobId'] },
+                      { $ne: ['$_id', '$$acceptedBidId'] }
+                    ]
+                  }
+                }
+              },
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'freelancer',
+                  foreignField: '_id',
+                  as: 'freelancerDetails'
+                }
+              },
+              { $unwind: '$freelancerDetails' }
+            ],
+            as: 'nonAcceptedBids'
+          }
+        },
+      
+        // Final projection
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            skills: 1,
+            budget: 1,
+            deadline: 1,
+            status: 1,
+            createdAt: 1,
+      
+            acceptedBid: {
+              _id: '$acceptedBid._id',
+              amount: '$acceptedBid.amount',
+              proposal: '$acceptedBid.proposal',
+              deliveryTime: '$acceptedBid.deliveryTime',
+              freelancerId: '$acceptedBid.freelancerDetails._id',
+              freelancerName: '$acceptedBid.freelancerDetails.name'
+            },
+      
+            nonAcceptedBids: {
+              $map: {
+                input: '$nonAcceptedBids',
+                as: 'bid',
+                in: {
+                  _id: '$$bid._id',
+                  amount: '$$bid.amount',
+                  proposal: '$$bid.proposal',
+                  deliveryTime: '$$bid.deliveryTime',
+                  freelancerId: '$$bid.freelancerDetails._id',
+                  freelancerName: '$$bid.freelancerDetails.name'
+                }
+              }
+            }
+          }
+        },
+      
+        { $sort: { createdAt: -1 } }
+      ]);
+
+      return res.status(200).json({
+        clientId: req.user.id,
+        totalJobs: jobs.length,
+        jobs
       });
     } catch (err) {
       console.error(err);

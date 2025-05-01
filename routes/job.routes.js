@@ -5,7 +5,7 @@ const { authMiddleware, authorizeRoles } = require('../middleware/auth.middlewar
 
 router.post('/', authMiddleware, authorizeRoles('client'), jobController.createJob);
 router.get('/:clientId/jobcount', authMiddleware, authorizeRoles('client'), jobController.countJobsByClient);
-router.get('/:clientId/jobs', authMiddleware, authorizeRoles('client'), jobController.getJobsByClient);
+router.get('/client', authMiddleware, authorizeRoles('client'), jobController.getJobsByClient);
 router.get('/', jobController.getJobs);
 router.get('/:id', jobController.getJobById);
 router.put('/:id', authMiddleware, authorizeRoles('client'), jobController.updateJob);
