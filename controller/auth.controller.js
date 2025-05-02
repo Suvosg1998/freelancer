@@ -1,6 +1,7 @@
 const User = require('../model/user.model');
 const bcrypt = require('bcryptjs');
 const Mailer = require('../helper/mailer'); 
+const jwt = require('jsonwebtoken');
 
 class AuthController {
   // Register
@@ -116,6 +117,132 @@ class AuthController {
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+  async forgetPassword(req, res) {
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ email });
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+      const link = `${process.env.LOCAL_PORT_URL}/reset-password/${token}`;
+      const mailer = new Mailer('Gmail', process.env.APP_EMAIL, process.env.APP_PASSWORD);
+      const mailerObj = {
+        to: email,
+        subject: "Password Reset",
+        text: `Hello ${user.name},
+      
+      Click the link below to reset your password:
+      ${link}
+      
+      This link will expire in 1 hour.
+      
+      If you did not request a password reset, please ignore this email.
+      
+      Thank you!
+      Best regards,
+      Team XYZ
+      
+      This is an automatically generated email. Please do not reply to this email.
+      © 2025 Team Papai. All rights reserved.
+      Powered by Papai | Version 1.0`,
+        html: `
+          <p>Hello ${user.name},</p>
+          <p>Click the link below to reset your password:</p>
+          <p>
+            <a href="${link}" style="
+              display: inline-block;
+              padding: 10px 20px;
+              background-color: #007BFF;
+              color: #fff;
+              text-decoration: none;
+              border-radius: 5px;
+            ">Reset Password</a>
+          </p>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you did not request a password reset, please ignore this email.</p>
+          <br>
+          <p>Thank you!</p>
+          <p>Best regards,</p>
+          <p>Team XYZ</p>
+          <hr>
+          <p style="font-size: 12px; color: #888;">
+            This is an automatically generated email. Please do not reply to this email.
+          </p>
+          <p style="font-size: 12px; color: #888;">
+            © 2025 Team Papai. All rights reserved.
+          </p>
+          <p style="font-size: 12px; color: #888;">
+            Powered by Papai | Version 1.0
+          </p>
+        `,
+      };
+      mailer.sendMail(mailerObj);
+      return res.status(200).json({ message: "Email for Reset Password sent" });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Server Error", error: error.message });
+    }
+  }
+
+ 
+async updatePassword(req, res) {
+  try {
+    const userId = req.user.id; // Assuming you have middleware to set req.user
+    const { currentPassword, newPassword } = req.body;
+    // Get user from DB
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if old password matches
+    const isMatch = bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    await User.updateOne({ _id: userId }, { password: hashedNewPassword });
+
+    return res.status(200).json({ message: "Password updated successfully" });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+  async resetPassword(req, res) {
+    try {
+      const { token } = req.params;
+      const { password, confirmPassword } = req.body;
+
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId);
+
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.password = hashedPassword;
+      await User.updateOne({ _id: user._id }, { password: hashedPassword });
+
+      return res.status(200).json({ message: "Password reset successfully" });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Server error", error: error.message });
     }
   }
 }
