@@ -52,6 +52,7 @@ class BidController {
             proposal: 1,
             amount: 1,
             deliveryTime: 1,
+            status: 1,
             createdAt: 1,
             freelancer: '$freelancerInfo._id',
             freelancerName: '$freelancerInfo.name'
