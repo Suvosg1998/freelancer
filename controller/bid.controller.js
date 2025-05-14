@@ -109,7 +109,7 @@ class BidController {
             deliveryTime: 1,
             jobId: '$jobInfo._id',
             jobTitle: '$jobInfo.title',
-            freelancerId: '$freelancerInfo._id',
+            status: 1,
             freelancerName: '$freelancerInfo.name',
             createdAt: 1
           }
