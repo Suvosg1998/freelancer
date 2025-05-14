@@ -134,8 +134,12 @@ class BidController {
         { status: 'in progress', acceptedBid: bid._id },
         { new: true }
       );
-
-      return res.status(200).json({ message: 'Bid accepted', data: job });
+      const bidstatus = await Bid.findByIdAndUpdate(
+        req.params.bidId,
+        { status: 'accepted' },
+        { new: true }
+      );
+      return res.status(200).json({ message: 'Bid accepted', data: job , bidstatus });
     } catch (err) {
       throw err;
     }
