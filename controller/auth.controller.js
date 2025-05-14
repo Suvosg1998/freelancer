@@ -1,3 +1,5 @@
+const Job = require('../model/job.model'); // Import Job model
+const Bid = require('../model/bid.model'); // Import Bid model
 const User = require('../model/user.model');
 const bcrypt = require('bcryptjs');
 const Mailer = require('../helper/mailer'); 
@@ -199,11 +201,11 @@ async validateOtp(req, res) {
       
       Thank you!
       Best regards,
-      Team XYZ
+      Team freelancer
       
       This is an automatically generated email. Please do not reply to this email.
-      © 2025 Team Papai. All rights reserved.
-      Powered by Papai | Version 1.0`,
+      © 2025 Team freelancer. All rights reserved.
+      Powered by freelancer | Version 1.0`,
         html: `
           <p>Hello ${user.name},</p>
           <p>Click the link below to reset your password:</p>
@@ -222,16 +224,16 @@ async validateOtp(req, res) {
           <br>
           <p>Thank you!</p>
           <p>Best regards,</p>
-          <p>Team XYZ</p>
+          <p>Team freelancer</p>
           <hr>
           <p style="font-size: 12px; color: #888;">
             This is an automatically generated email. Please do not reply to this email.
           </p>
           <p style="font-size: 12px; color: #888;">
-            © 2025 Team Papai. All rights reserved.
+            © 2025 Team freelancer. All rights reserved.
           </p>
           <p style="font-size: 12px; color: #888;">
-            Powered by Papai | Version 1.0
+            Powered by freelancer | Version 1.0
           </p>
         `,
       };
@@ -300,7 +302,48 @@ async updatePassword(req, res) {
         .json({ message: "Server error", error: error.message });
     }
   }
-  async updateProfile(req, res) {
+  async getDashboard(req, res) {
+  try {
+    const userId = req.user.id; // Assuming `authMiddleware` sets `req.user`
+
+    // Fetch user details
+    const user = await User.findById(userId).select('-password'); // Exclude password
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const dashboardData = {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          country: user.country,
+          photo: user.photo,
+        },
+        Job,
+        Bid,
+      };
+    if (user.role === 'client') {
+      // Fetch jobs posted by the client
+      const jobs = await Job.find({ client: userId });
+      dashboardData.Job = jobs;
+    } else if (user.role === 'freelancer') {
+      // Fetch bids placed by the freelancer
+      const bids = await Bid.find({ freelancer: userId });
+      dashboardData.Bid = bids;
+    }
+    // Return dashboard data
+    return res.status(200).json({
+      message: "Dashboard data fetched successfully",
+      dashboard: dashboardData,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+async updateProfile(req, res) {
   try {
     const userId = req.user.id;
     const { name, email, country } = req.body;
