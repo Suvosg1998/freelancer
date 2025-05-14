@@ -8,7 +8,7 @@ class AuthController {
 async register(req, res) {
   try {
     const { name, email, password, role,country } = req.body;
-    const photo = req.file;
+    const photo = req.file ? req.file.path : null;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -50,7 +50,8 @@ async register(req, res) {
         name: user.name,
         email: user.email,
         role: user.role,
-        country:user.country
+        country:user.country,
+        photo:user.photo
       },
     });
   } catch (err) {

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
   name: String,
-  email: { type: String, unique: true },
+  email: { type: String },
   password: String,
   role: { type: String, enum: ['client', 'freelancer'], default: 'freelancer' },
   otp: { type: Number, default: null },
