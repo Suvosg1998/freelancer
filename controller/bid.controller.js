@@ -140,6 +140,31 @@ class BidController {
       throw err;
     }
   }
+   async rejectBid(req, res) {
+    try {
+      const bidId = req.params.bidId;
+      // Check if the bid exists
+      const bid = await Bid.findById(bidId);
+      if (!bid) {
+        return res.status(404).json({ message: 'Bid not found' });
+      }
+      // Check if the job belongs to the client
+      const job = await Job.findOne({ _id: bid.job, client: req.user.id });
+      if (!job) {
+        return res.status(403).json({ message: 'Unauthorized to reject this bid' });
+      }
+      // Reject the bid
+      await Bid.findOneAndUpdate(
+        { _id: bid.job, client: req.user.id },
+        { status: 'rejected' },
+        { new: true }
+      );
+      return res.status(200).json({ message: 'Bid rejected successfully' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  }
 }
 
 module.exports = new BidController();

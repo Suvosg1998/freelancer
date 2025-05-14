@@ -7,6 +7,13 @@ const userSchema = new mongoose.Schema({
   password: String,
   role: { type: String, enum: ['client', 'freelancer'], default: 'freelancer' },
   otp: { type: Number, default: null },
+  photo: {
+        type: String,
+        required: true
+    },
+  country:{
+    type:String
+  }
 }, { timestamps: true, versionKey: false });
 
 userSchema.methods.generateToken = function () {

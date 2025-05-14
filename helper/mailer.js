@@ -17,8 +17,7 @@ class Mailer {
             from: this.transporter.options.auth.user, // sender email
             to: mailObj.to, // recipient email
             subject: mailObj.subject, // email subject
-            text: mailObj.text, // plain text body
-            // html: html, // html body (optional)
+            html: mailObj.html // html body
         };
 
         try {

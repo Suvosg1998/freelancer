@@ -7,5 +7,6 @@ router.post('/:jobId', authMiddleware, authorizeRoles('freelancer'), bidControll
 router.get('/client', authMiddleware, authorizeRoles('client'), bidController.getBidsForClientJobs);
 router.get('/:jobId', authMiddleware, bidController.getBidsForJob);
 router.patch('/:bidId/accept', authMiddleware, authorizeRoles('client'), bidController.acceptBid);
+router.patch('/:bidId/reject', authMiddleware, authorizeRoles('client'), bidController.rejectBid);
 
 module.exports = router;
