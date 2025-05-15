@@ -253,22 +253,19 @@ async updatePassword(req, res) {
   try {
     const userId = req.user.id; // Assuming you have middleware to set req.user
     const { currentPassword, newPassword } = req.body;
-    // Get user from DB
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if old password matches
-    const isMatch = bcrypt.compare(currentPassword, user.password);
+    // ✅ FIXED: Await the password comparison
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Current password is incorrect" });
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update user password
     await User.updateOne({ _id: userId }, { password: hashedNewPassword });
 
     return res.status(200).json({ message: "Password updated successfully" });
