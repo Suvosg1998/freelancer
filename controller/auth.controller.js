@@ -169,6 +169,8 @@ async validateOtp(req, res) {
           name: user.name,
           email: user.email,
           role: user.role,
+          country: user.country,
+          photo: user.photo
         },
       });
     } catch (err) {
