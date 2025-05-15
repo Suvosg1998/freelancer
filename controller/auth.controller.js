@@ -10,7 +10,7 @@ class AuthController {
 async register(req, res) {
   try {
     const { name, email, password, role,country } = req.body;
-    const photo = req.file ? req.file.path : null;
+    const photo = req.file ? `https://freelancer-npou.onrender.com/uploads/${req.file.filename}` : null;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
