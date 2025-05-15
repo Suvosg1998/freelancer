@@ -8,8 +8,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['client', 'freelancer'], default: 'freelancer' },
   otp: { type: Number, default: null },
   photo: {
-        type: String,
-        required: true
+        type: String
     },
   country:{
     type:String
